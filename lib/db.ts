@@ -2,7 +2,6 @@ import {
   ChatSession,
   CreateSessionRequest,
   UpdateSessionRequest,
-  Message,
 } from "@/types/chat";
 import connectDB from "./mongodb";
 import Session, { ISession } from "@/models/Session";

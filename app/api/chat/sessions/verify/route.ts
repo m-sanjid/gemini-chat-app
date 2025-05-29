@@ -3,6 +3,12 @@ import { db } from "@/lib/db";
 import { createSuccessResponse, createErrorResponse } from "@/lib/response";
 import { ValidationError, APIError } from "@/lib/errors";
 
+// Declare global type for _sessions
+declare global {
+  // eslint-disable-next-line no-var
+  var _sessions: Map<string, unknown> | undefined;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();

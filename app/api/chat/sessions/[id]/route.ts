@@ -4,21 +4,17 @@ import { UpdateSessionSchema } from "@/lib/validation";
 import { createSuccessResponse, createErrorResponse } from "@/lib/response";
 import { ValidationError, APIError, NotFoundError } from "@/lib/errors";
 
-interface RouteParams {
-  params: { id: string };
-}
-
-export async function GET(request: NextRequest, context: RouteParams) {
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
-    const { id } = context.params;
-    if (!id) {
-      throw new ValidationError("Session ID is required");
-    }
+    const { id } = await context.params;
+    if (!id) throw new ValidationError("Session ID is required");
 
     const session = await db.getSession(id);
-    if (!session) {
-      throw new NotFoundError("Session");
-    }
+    if (!session) throw new NotFoundError("Session");
+
     return createSuccessResponse(session);
   } catch (error) {
     console.error("Error fetching session:", error);
@@ -29,27 +25,26 @@ export async function GET(request: NextRequest, context: RouteParams) {
   }
 }
 
-export async function PATCH(request: NextRequest, context: RouteParams) {
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
-    const { id } = context.params;
-    if (!id) {
-      throw new ValidationError("Session ID is required");
-    }
+    const { id } = await context.params;
+    if (!id) throw new ValidationError("Session ID is required");
 
     const body = await request.json();
-
     const validationResult = UpdateSessionSchema.safeParse(body);
+
     if (!validationResult.success) {
       throw new ValidationError(
         "Invalid request data",
-        validationResult.error.issues,
+        validationResult.error.issues
       );
     }
 
     const updatedSession = await db.updateSession(id, validationResult.data);
-    if (!updatedSession) {
-      throw new NotFoundError("Session");
-    }
+    if (!updatedSession) throw new NotFoundError("Session");
 
     return createSuccessResponse(updatedSession);
   } catch (error) {
@@ -65,17 +60,17 @@ export async function PATCH(request: NextRequest, context: RouteParams) {
   }
 }
 
-export async function DELETE(request: NextRequest, context: RouteParams) {
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
-    const { id } = context.params;
-    if (!id) {
-      throw new ValidationError("Session ID is required");
-    }
+    const { id } = await context.params;
+    if (!id) throw new ValidationError("Session ID is required");
 
     const deleted = await db.deleteSession(id);
-    if (!deleted) {
-      throw new NotFoundError("Session");
-    }
+    if (!deleted) throw new NotFoundError("Session");
+
     return createSuccessResponse({ message: "Session deleted successfully" });
   } catch (error) {
     console.error("Error deleting session:", error);
