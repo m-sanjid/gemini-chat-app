@@ -1,36 +1,120 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Gemini Chat App
+
+A modern, responsive chat interface built with Next.js 14 and Google's Gemini AI API. Features real-time streaming responses, dark/light mode, and a beautiful UI using Shadcn components.
+
+## Features
+
+- 💬 Real-time chat with Google's Gemini AI
+- 🌓 Dark/Light mode toggle
+- 📱 Responsive design for all devices
+- ⚡ Streaming responses for instant feedback
+- 📋 Message copy functionality
+- 💾 Chat history persistence
+- 🎨 Modern UI with Shadcn components
+- 🔄 Auto-scrolling messages
+- ⌨️ Keyboard shortcuts
+
+## Tech Stack
+
+- Next.js 14 (App Router)
+- TypeScript
+- Tailwind CSS
+- Shadcn UI
+- Google Generative AI SDK
+- Framer Motion
+- TanStack Query
+- Zod for validation
+
+## Prerequisites
+
+- Node.js 18+ and npm
+- Google AI Studio API key
 
 ## Getting Started
 
-First, run the development server:
+1. Clone the repository:
+
+```bash
+git clone https://github.com/yourusername/gemini-chat-app.git
+cd gemini-chat-app
+```
+
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+3. Create a `.env.local` file in the root directory:
+
+```env
+GOOGLE_API_KEY=your_api_key_here
+```
+
+4. Start the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+5. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Create a `.env.local` file with the following variables:
 
-## Learn More
+```env
+GOOGLE_API_KEY=your_api_key_here
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Project Structure
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+├── app/
+│   ├── api/
+│   │   └── chat/
+│   │       ├── route.ts
+│   │       └── sessions/
+│   └── layout.tsx
+├── components/
+│   ├── ui/
+│   ├── ChatInterface.tsx
+│   ├── ChatSidebar.tsx
+│   ├── MessageBubble.tsx
+│   └── TypingIndicator.tsx
+├── lib/
+│   ├── AIService.ts
+│   ├── db.ts
+│   └── validation.ts
+└── types/
+    └── chat.ts
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## API Routes
 
-## Deploy on Vercel
+- `POST /api/chat`: Send a message to Gemini AI
+- `GET /api/chat/sessions`: Get all chat sessions
+- `POST /api/chat/sessions`: Create a new chat session
+- `GET /api/chat/sessions/[id]`: Get a specific chat session
+- `PATCH /api/chat/sessions/[id]`: Update a chat session
+- `DELETE /api/chat/sessions/[id]`: Delete a chat session
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Contributing
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- [Next.js](https://nextjs.org/)
+- [Shadcn UI](https://ui.shadcn.com/)
+- [Google AI Studio](https://makersuite.google.com/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [Framer Motion](https://www.framer.com/motion/)
