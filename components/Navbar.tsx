@@ -1,21 +1,7 @@
 import React from "react";
 import { Button } from "./ui/button";
 import { ThemeToggle } from "./ThemeToggle";
-import {
-  Trash2,
-  Menu,
-  Settings,
-  HelpCircle,
-  MessageSquare,
-  Plus,
-} from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
+import { Trash2, Menu, MessageSquare, Plus, Loader2 } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -24,6 +10,18 @@ import {
 } from "./ui/tooltip";
 import { Badge } from "./ui/badge";
 import MotionDiv from "./MotionDiv";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "./ui/alert-dialog";
+import { Message } from "@/types/chat";
 
 const Navbar = ({
   clearChat,
@@ -34,7 +32,7 @@ const Navbar = ({
   isLoading,
 }: {
   clearChat: () => void;
-  messages: any[];
+  messages: Message[];
   onToggleSidebar: () => void;
   isSidebarOpen: boolean;
   onNewChat: () => void;
@@ -46,7 +44,7 @@ const Navbar = ({
       animate={{ y: 0, opacity: 1 }}
       className="bg-background/95 sticky top-0 z-50 border-b p-3 backdrop-blur"
     >
-      <div className="mx-auto max-w-6xl flex items-center justify-between">
+      <div className="mx-auto flex max-w-6xl items-center justify-between">
         <div className="flex items-center gap-3">
           <TooltipProvider>
             <Tooltip>
@@ -73,7 +71,7 @@ const Navbar = ({
             className="flex items-center gap-2"
           >
             <MessageSquare className="text-primary h-5 w-5" />
-            <h1 className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-sm md:text-2xl font-bold text-transparent">
+            <h1 className="from-primary to-primary/60 bg-gradient-to-r bg-clip-text text-sm font-bold text-transparent md:text-2xl">
               Gemini Chat
             </h1>
           </MotionDiv>
@@ -93,7 +91,7 @@ const Navbar = ({
         </div>
 
         {/* Desktop Navbar */}
-        <div className="items-center gap-3 hidden md:flex">
+        <div className="hidden items-center gap-3 md:flex">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -113,68 +111,45 @@ const Navbar = ({
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-
-          <DropdownMenu>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="hover:bg-primary/10"
-                    >
-                      <Settings className="h-5 w-5" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Settings</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem className="cursor-pointer">
-                <HelpCircle className="mr-2 h-4 w-4" />
-                Help & Documentation
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-destructive cursor-pointer"
-                onClick={clearChat}
-                disabled={messages.length === 0}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={messages.length === 0 || isLoading}
+                className="transition-all duration-200 hover:scale-105"
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                Clear All Chats
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
+                Clear
+                {messages.length > 0 && (
+                  <Badge variant="secondary" className="ml-2">
+                    {messages.length}
+                  </Badge>
+                )}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Clear Chat</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will delete the current chat history permanently.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
                   onClick={clearChat}
-                  disabled={messages.length === 0 || isLoading}
-                  className="transition-all duration-200 hover:scale-105"
+                  disabled={isLoading}
+                  className="bg-destructive hover:bg-destructive/90 text-white"
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  {isLoading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : null}
                   Clear
-                  {messages.length > 0 && (
-                    <Badge variant="secondary" className="ml-2">
-                      {messages.length}
-                    </Badge>
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Clear current chat</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           <ThemeToggle />
         </div>
       </div>
