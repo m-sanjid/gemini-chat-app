@@ -33,7 +33,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { motion, AnimatePresence } from "motion/react";
-import { cn } from "@/lib/utils";
+import { cn, truncate } from "@/lib/utils";
 import {
   useChatSessions,
   useCreateSession,
@@ -42,6 +42,7 @@ import {
   useUpdateSession,
 } from "@/hooks/useChatHistory";
 import { ChatSession } from "@/types/chat";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "./ui/input-group";
 
 interface ChatSidebarProps {
   currentSessionId: string | null;
@@ -68,9 +69,9 @@ export default function ChatSidebar({
 
   const filteredSessions =
     sessions?.filter(
-      (session) =>
-        session.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        session.messages?.some((m) =>
+      (s) =>
+        s.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        s.messages?.some((m) =>
           m.content?.toLowerCase().includes(searchQuery.toLowerCase()),
         ),
     ) ?? [];
@@ -108,11 +109,6 @@ export default function ChatSidebar({
     setEditTitle("");
   };
 
-  const handleCancelEdit = () => {
-    setEditingId(null);
-    setEditTitle("");
-  };
-
   const inputRef = useRef<HTMLInputElement | null>(null);
   useEffect(() => {
     if (editingId) inputRef.current?.focus();
@@ -120,49 +116,53 @@ export default function ChatSidebar({
 
   return (
     <motion.aside
-      initial={{ x: -100, opacity: 0 }}
+      initial={{ x: -40, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
+      transition={{ type: "spring", stiffness: 80, damping: 20 }}
       className={cn(
-        "bg-background flex h-full w-[280px] flex-col border-r",
+        "flex h-full w-[290px] flex-col",
         className,
       )}
     >
-      {/* Top header */}
-      <div className="bg-background sticky top-0 z-10 space-y-3 border-b p-4">
+      {/* HEADER */}
+      <div className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur-xl p-4 space-y-3 shadow-sm">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold tracking-tight">Chats</h2>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button size="icon" variant="ghost" className="h-8 w-8">
+              <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-accent">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
+
             <DropdownMenuContent align="end" className="w-44">
               <DropdownMenuItem onClick={handleNewChat}>
-                <Plus className="mr-2 h-4 w-4" />
-                New Chat
+                <Plus className="mr-2 h-4 w-4" /> New Chat
               </DropdownMenuItem>
+
               <DropdownMenuSeparator />
+
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <DropdownMenuItem
-                    onSelect={(e) => e.preventDefault()}
                     className="text-destructive"
                     disabled={
                       clearAllMutation.isPending || sessions.length === 0
                     }
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Clear All
+                    <Trash2 className="mr-2 h-4 w-4" /> Clear All
                   </DropdownMenuItem>
                 </AlertDialogTrigger>
+
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Clear All Chats</AlertDialogTitle>
+                    <AlertDialogTitle>Clear All Chats?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This will delete all chat history permanently.
+                      This action is permanent.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
+
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction
@@ -170,9 +170,9 @@ export default function ChatSidebar({
                       disabled={clearAllMutation.isPending}
                       className="bg-destructive hover:bg-destructive/90 text-white"
                     >
-                      {clearAllMutation.isPending ? (
+                      {clearAllMutation.isPending && (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : null}
+                      )}
                       Clear All
                     </AlertDialogAction>
                   </AlertDialogFooter>
@@ -184,7 +184,7 @@ export default function ChatSidebar({
 
         <Button
           onClick={handleNewChat}
-          className="w-full"
+          className="w-full shadow-sm active:scale-95 transition-all duration-300 ease-in-out"
           disabled={createSessionMutation.isPending}
         >
           {createSessionMutation.isPending ? (
@@ -195,55 +195,51 @@ export default function ChatSidebar({
           New Chat
         </Button>
 
-        <div className="relative">
-          <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-          <Input
+        <InputGroup>
+          <InputGroupInput placeholder="Search..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search chats..."
-            className="pl-9"
           />
-        </div>
+          <InputGroupAddon>
+            <Search />
+          </InputGroupAddon>
+        </InputGroup>
       </div>
 
-      {/* Chat list */}
-      <ScrollArea className="flex-1 px-2 pb-4">
+      {/* CHAT LIST */}
+      <ScrollArea className="flex-1 px-3 pb-6">
         {isLoading ? (
           <div className="animate-pulse space-y-3 p-4">
-            {Array(5)
-              .fill(null)
-              .map((_, i) => (
-                <div key={i} className="bg-muted h-10 rounded-md" />
-              ))}
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-9 rounded-md bg-muted" />
+            ))}
           </div>
         ) : filteredSessions.length === 0 ? (
-          <div className="text-muted-foreground flex h-full flex-col items-center justify-center p-6 text-center">
+          <div className="flex h-full flex-col items-center justify-center text-center text-muted-foreground p-6">
             <FolderX className="mb-2 h-8 w-8" />
-            <p className="text-sm">
-              {searchQuery ? "No chats found." : "No chats yet"}
-            </p>
-            {!searchQuery && (
-              <p className="mt-1 text-xs">
-                Start a conversation to see it here.
-              </p>
-            )}
+            <p className="text-sm">{searchQuery ? "No results." : "No chats yet"}</p>
+            {!searchQuery && <p className="text-xs mt-1">Start a conversation.</p>}
           </div>
         ) : (
-          <div className="space-y-1">
+          <div className="space-y-1 p-1">
             <AnimatePresence mode="popLayout">
-              {filteredSessions.map((session) => (
+              {filteredSessions.map((session, index) => (
                 <motion.div
                   key={session.id}
                   layout
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0 }}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{
+                    opacity: 1,
+                    y: 0,
+                    transition: { delay: index * 0.03 },
+                  }}
+                  exit={{ opacity: 0, scale: 0.97 }}
                 >
                   <div
                     onClick={() => onSessionSelect(session.id)}
                     className={cn(
-                      "group hover:bg-muted flex cursor-pointer items-center justify-between rounded-md px-3 py-2 text-sm transition-all",
-                      currentSessionId === session.id && "bg-muted",
+                      "group flex cursor-pointer items-center justify-between rounded-lg px-3 py-2.5 text-sm transition-all duration-200 hover:bg-accent/70 hover:shadow-sm",
+                      currentSessionId === session.id && "bg-accent/80 shadow-md border border-border/50",
                     )}
                   >
                     {editingId === session.id ? (
@@ -253,17 +249,24 @@ export default function ChatSidebar({
                         onChange={(e) => setEditTitle(e.target.value)}
                         onKeyDown={(e) => {
                           if (e.key === "Enter") handleSaveTitle();
-                          if (e.key === "Escape") handleCancelEdit();
+                          if (e.key === "Escape") {
+                            setEditingId(null);
+                          }
                         }}
                         className="text-sm"
                       />
                     ) : (
                       <>
                         <div className="flex items-center gap-2">
-                          <MessageSquare className="text-muted-foreground h-4 w-4" />
-                          <span className="truncate">{session.title}</span>
+                          <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                          <span className="truncate">{truncate(session.title, 20)}</span>
                         </div>
-                        <div className="flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
+
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
                           <Button
                             variant="ghost"
                             size="icon"
@@ -275,18 +278,47 @@ export default function ChatSidebar({
                           >
                             <Edit className="h-3 w-3" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteChat(session.id);
-                            }}
-                          >
-                            <Trash2 className="text-destructive h-3 w-3" />
-                          </Button>
-                        </div>
+
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 hover:bg-destructive/10 transition-colors"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Trash2 className="h-3 w-3 text-destructive" />
+                              </Button>
+                            </AlertDialogTrigger>
+
+                            <AlertDialogContent className="backdrop-blur-xl border bg-background/80 shadow-2xl rounded-xl">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle className="flex items-center gap-2">
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                  Delete Chat?
+                                </AlertDialogTitle>
+                                <AlertDialogDescription className="pt-1">
+                                  This conversation will be <strong>permanently deleted</strong>.
+                                  You can’t undo this action.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+
+                              <AlertDialogFooter>
+                                <AlertDialogCancel className="rounded-lg">
+                                  Cancel
+                                </AlertDialogCancel>
+
+                                <AlertDialogAction
+                                  className="bg-destructive hover:bg-destructive/90 text-white rounded-lg shadow-lg hover:shadow-red-500/20"
+                                  onClick={() => handleDeleteChat(session.id)}
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+
+                        </motion.div>
                       </>
                     )}
                   </div>
