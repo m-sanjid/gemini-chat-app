@@ -1,331 +1,446 @@
 "use client";
 
 import { Message } from "@/types/chat";
-import { User, Bot, Clock, Copy, Check } from "lucide-react";
+import { User, Bot, Clock, Copy, Check, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useMemo, useState } from "react";
-import ReactMarkdown from "react-markdown";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
-import remarkGfm from "remark-gfm";
-import { Button } from "./ui/button";
+import { JSX, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
 
-interface MessageBubbleProps {
-  message: Message;
+function renderMessage(content: string) {
+  const lines = content.split("\n");
+  const out: JSX.Element[] = [];
+  let buffer: string[] = [];
+  let inside = false;
+  let lang = "";
+
+  lines.forEach((line, i) => {
+    // Code block detection
+    if (line.startsWith("```")) {
+      if (!inside) {
+        inside = true;
+        buffer = [];
+        lang = line.slice(3).trim() || "code";
+      } else {
+        inside = false;
+        out.push(
+          <div
+            key={`code-${i}`}
+            className="group/code relative my-4 overflow-hidden rounded-xl border border-zinc-800/50 bg-linear-to-br from-zinc-900 to-zinc-950 shadow-xl"
+          >
+            {/* macOS-style header */}
+            <div className="flex items-center justify-between border-b border-zinc-800/50 bg-zinc-900/90 px-4 py-2.5 backdrop-blur-sm">
+              <div className="flex items-center gap-2">
+                <div className="flex gap-1.5">
+                  <div className="h-3 w-3 rounded-full bg-red-500/90 shadow-sm" />
+                  <div className="h-3 w-3 rounded-full bg-yellow-500/90 shadow-sm" />
+                  <div className="h-3 w-3 rounded-full bg-green-500/90 shadow-sm" />
+                </div>
+                {lang && (
+                  <span className="ml-2 text-xs font-semibold text-zinc-400">
+                    {lang}
+                  </span>
+                )}
+              </div>
+              <motion.button
+                onClick={() => {
+                  navigator.clipboard.writeText(buffer.join("\n"));
+                  toast.success("Code copied to clipboard");
+                }}
+                className="rounded-md p-1.5 opacity-0 transition-all hover:bg-zinc-800/80 group-hover/code:opacity-100"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+              >
+                <Copy className="h-3.5 w-3.5 text-zinc-400" />
+              </motion.button>
+            </div>
+            {/* Code content with syntax highlighting colors */}
+            <pre className="overflow-x-auto p-4 text-sm">
+              <code className="font-mono leading-relaxed text-zinc-100">
+                {buffer.join("\n")}
+              </code>
+            </pre>
+          </div>
+        );
+        lang = "";
+      }
+      return;
+    }
+
+    if (inside) {
+      buffer.push(line);
+      return;
+    }
+
+    // Enhanced text rendering with markdown support
+    const trimmed = line.trim();
+
+    // Headings
+    if (trimmed.startsWith("### ")) {
+      out.push(
+        <h3 key={`h3-${i}`} className="mb-2 mt-4 text-base font-bold text-foreground">
+          {trimmed.slice(4)}
+        </h3>
+      );
+      return;
+    }
+    if (trimmed.startsWith("## ")) {
+      out.push(
+        <h2 key={`h2-${i}`} className="mb-3 mt-5 text-lg font-bold text-foreground">
+          {trimmed.slice(3)}
+        </h2>
+      );
+      return;
+    }
+    if (trimmed.startsWith("# ")) {
+      out.push(
+        <h1 key={`h1-${i}`} className="mb-3 mt-5 text-xl font-bold text-foreground">
+          {trimmed.slice(2)}
+        </h1>
+      );
+      return;
+    }
+
+    // Bullet points
+    if (trimmed.startsWith("- ") || trimmed.startsWith("* ") || trimmed.startsWith("• ")) {
+      const content = trimmed.slice(2).trim();
+      out.push(
+        <div key={`li-${i}`} className="mb-2 flex gap-3 leading-relaxed">
+          <span className="mt-1.5 flex h-1.5 w-1.5 shrink-0 rounded-full bg-primary/80" />
+          <span className="flex-1">{parseBoldItalic(content)}</span>
+        </div>
+      );
+      return;
+    }
+
+    // Numbered lists
+    const numMatch = trimmed.match(/^(\d+)\.\s+(.+)/);
+    if (numMatch) {
+      out.push(
+        <div key={`num-${i}`} className="mb-2 flex gap-3 leading-relaxed">
+          <span className="font-semibold text-primary/90">{numMatch[1]}.</span>
+          <span className="flex-1">{parseBoldItalic(numMatch[2])}</span>
+        </div>
+      );
+      return;
+    }
+
+    // Block quotes
+    if (trimmed.startsWith("> ")) {
+      out.push(
+        <blockquote
+          key={`quote-${i}`}
+          className="my-3 border-l-4 border-primary/40 bg-primary/5 py-2 pl-4 pr-3 italic text-muted-foreground"
+        >
+          {parseBoldItalic(trimmed.slice(2))}
+        </blockquote>
+      );
+      return;
+    }
+
+    // Horizontal rule
+    if (trimmed === "---" || trimmed === "***") {
+      out.push(
+        <hr key={`hr-${i}`} className="my-4 border-t border-border/50" />
+      );
+      return;
+    }
+
+    // Normal text
+    if (trimmed.length > 0) {
+      out.push(
+        <p key={`p-${i}`} className="mb-3 whitespace-pre-wrap leading-relaxed">
+          {parseBoldItalic(line)}
+        </p>
+      );
+    } else {
+      // Empty line
+      out.push(<div key={`space-${i}`} className="h-1" />);
+    }
+  });
+
+  return out;
 }
 
-export function MessageBubble({ message }: MessageBubbleProps) {
+// Helper function to parse bold and italic text
+function parseBoldItalic(text: string): JSX.Element | string {
+  // Check if text contains markdown
+  if (!text.includes("**") && !text.includes("*") && !text.includes("`")) {
+    return text;
+  }
+
+  const parts: JSX.Element[] = [];
+  let remaining = text;
+  let key = 0;
+
+  while (remaining.length > 0) {
+    // Inline code (highest priority)
+    const codeMatch = remaining.match(/^`([^`]+)`/);
+    if (codeMatch) {
+      parts.push(
+        <code
+          key={key++}
+          className="rounded bg-zinc-800/80 px-1.5 py-0.5 text-[0.9em] font-mono text-zinc-100"
+        >
+          {codeMatch[1]}
+        </code>
+      );
+      remaining = remaining.slice(codeMatch[0].length);
+      continue;
+    }
+
+    // Bold text
+    const boldMatch = remaining.match(/^\*\*([^*]+)\*\*/);
+    if (boldMatch) {
+      parts.push(
+        <strong key={key++} className="font-bold text-foreground">
+          {boldMatch[1]}
+        </strong>
+      );
+      remaining = remaining.slice(boldMatch[0].length);
+      continue;
+    }
+
+    // Italic text
+    const italicMatch = remaining.match(/^\*([^*]+)\*/);
+    if (italicMatch) {
+      parts.push(
+        <em key={key++} className="italic">
+          {italicMatch[1]}
+        </em>
+      );
+      remaining = remaining.slice(italicMatch[0].length);
+      continue;
+    }
+
+    // Regular text
+    const nextSpecial = remaining.search(/[*`]/);
+    if (nextSpecial === -1) {
+      parts.push(<span key={key++}>{remaining}</span>);
+      break;
+    } else {
+      parts.push(<span key={key++}>{remaining.slice(0, nextSpecial)}</span>);
+      remaining = remaining.slice(nextSpecial);
+    }
+  }
+
+  return <>{parts}</>;
+}
+
+export function MessageBubble({ message }: { message: Message }) {
+  const [hover, setHover] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
+
   const isUser = message.role === "user";
 
   const timestamp = useMemo(() => {
-    const date = new Date(message.timestamp);
-    const now = new Date();
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-
-    if (diffInHours < 24) {
-      return date.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } else if (diffInHours < 48) {
-      return (
-        "Yesterday at " +
-        date.toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        })
-      );
-    } else {
-      return date.toLocaleDateString([], {
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    }
+    const d = new Date(message.timestamp);
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   }, [message.timestamp]);
 
-  const copyToClipboard = async () => {
+  const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(message.content);
       setCopied(true);
-      toast.success("Message copied to clipboard");
+      toast.success("Copied to clipboard");
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to copy message");
+    } catch {
+      toast.error("Failed to copy");
     }
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.3, type: "spring", stiffness: 300, damping: 25 }}
+      layout
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      initial={{ opacity: 0, y: 20, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -12, scale: 0.97 }}
+      transition={{ type: "spring", stiffness: 200, damping: 25 }}
       className={cn(
-        "flex w-full gap-4",
-        isUser ? "justify-end" : "justify-start",
+        "group flex w-full gap-4 px-1 transition-all duration-300",
+        isUser ? "justify-end" : "justify-start"
       )}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
     >
+      {/* AI Avatar */}
       {!isUser && (
-        <motion.div 
-          className="flex-shrink-0"
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.1 }}
+        <motion.div
+          className="shrink-0"
         >
-          <div 
+          <div
             className={cn(
-              "flex h-8 w-8 items-center justify-center rounded-full border shadow-sm transition-all duration-200",
-              "bg-gradient-to-br from-primary/20 to-primary/10 border-primary/20",
-              isHovered && "shadow-md scale-105 border-primary/30"
+              "relative flex h-10 w-10 items-center justify-center rounded-full border shadow-lg transition-all duration-300",
+              "bg-linear-to-br from-primary/30 via-primary/20 to-primary/10",
+              "border-primary/40",
+              hover && "shadow-xl shadow-primary/25"
             )}
           >
-            <Bot className="text-primary h-4 w-4" />
+            {/* Animated pulse ring */}
+            <motion.div
+              className="absolute inset-0 rounded-full border-2 border-primary/40"
+              animate={{
+                scale: hover ? [1, 1.3, 1] : 1,
+                opacity: hover ? [0.5, 0, 0.5] : 0,
+              }}
+              transition={{
+                duration: 2,
+                repeat: hover ? Infinity : 0,
+                ease: "easeInOut",
+              }}
+            />
+            <Sparkles className="relative z-10 h-5 w-5 text-primary" strokeWidth={2} />
           </div>
         </motion.div>
       )}
 
-      <div
-        className={cn(
-          "group relative flex max-w-[85%] flex-col",
-          isUser ? "items-end" : "items-start",
-        )}
-      >
+      {/* Message Column */}
+      <div className={cn("flex max-w-[80%] flex-col gap-1.5 md:max-w-[75%]", isUser && "items-end")}>
+        {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: -10 }}
+          initial={{ opacity: 0, y: -5 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+          transition={{ delay: 0.05 }}
           className={cn(
-            "mb-2 flex items-center gap-2",
-            isUser ? "flex-row-reverse" : "flex-row",
+            "flex items-center gap-2 px-1 text-xs",
+            isUser ? "flex-row-reverse" : "flex-row"
           )}
         >
-          <span className="text-sm font-medium text-foreground/90">
+          <span className="font-semibold text-foreground/90">
             {isUser ? "You" : "AI Assistant"}
           </span>
-          <div className="text-muted-foreground flex items-center gap-1 text-xs">
+          <span className="flex items-center gap-1.5 text-muted-foreground/70">
             <Clock className="h-3 w-3" />
-            <span>{timestamp}</span>
-          </div>
+            {timestamp}
+          </span>
         </motion.div>
 
+        {/* Message Bubble */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.3 }}
+          whileHover={{ scale: 1.005 }}
+          transition={{ delay: 0.08, type: "spring", stiffness: 300, damping: 25 }}
           className={cn(
-            "relative rounded-2xl px-4 py-3 shadow-sm border backdrop-blur-sm transition-all duration-200",
+            "group/bubble relative overflow-hidden rounded-2xl border shadow-lg backdrop-blur-sm transition-all duration-300",
             isUser
-              ? "bg-gradient-to-br from-primary to-primary/90 text-primary-foreground rounded-tr-none border-primary/20 shadow-primary/10"
-              : "bg-gradient-to-br from-muted/80 to-muted/60 rounded-tl-none border-border/50",
-            isHovered && (isUser ? "shadow-lg shadow-primary/20" : "shadow-md")
+              ? [
+                "bg-linear-to-br from-primary via-primary/95 to-primary/85",
+                "text-primary-foreground",
+                "border-primary/40",
+                "rounded-tr-md",
+                "shadow-primary/20",
+                hover && "shadow-xl shadow-primary/30",
+              ]
+              : [
+                "bg-linear-to-br from-card via-card/95 to-card/90",
+                "text-foreground",
+                "border-border/50",
+                "rounded-tl-md",
+                hover && "shadow-xl border-border/60",
+              ],
+            "px-5 py-4"
           )}
         >
-          <div className="prose prose-sm dark:prose-invert max-w-none">
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={{
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                code({ inline, className, children, ...props }: any) {
-                  const match = /language-(\w+)/.exec(className || "");
-                  return !inline && match ? (
-                    <motion.div 
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.4 }}
-                      className="group/code relative rounded-lg overflow-hidden my-3"
-                    >
-                      <SyntaxHighlighter
-                        style={vscDarkPlus}
-                        language={match[1]}
-                        PreTag="div"
-                        customStyle={{
-                          margin: 0,
-                          borderRadius: '0.5rem',
-                          fontSize: '0.875rem',
-                        }}
-                        {...props}
-                      >
-                        {String(children).replace(/\n$/, "")}
-                      </SyntaxHighlighter>
-                      
-                      <motion.div
-                        initial={{ opacity: 0, x: 10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.5 }}
-                        className="absolute top-2 right-2"
-                      >
-                        <Button
-                          variant="secondary"
-                          size="icon"
-                          className="h-8 w-8 bg-background/80 hover:bg-background/90 backdrop-blur-sm opacity-0 transition-opacity group-hover/code:opacity-100"
-                          onClick={() => {
-                            navigator.clipboard.writeText(String(children));
-                            toast.success("Code copied to clipboard");
-                          }}
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </motion.div>
-                    </motion.div>
-                  ) : (
-                    <code className={cn("px-1.5 py-0.5 rounded-md text-sm", 
-                      isUser ? "bg-primary-foreground/20" : "bg-muted"
-                    )} {...props}>
-                      {children}
-                    </code>
-                  );
-                },
-                p: ({ children }) => (
-                  <motion.p 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 }}
-                    className="mb-3 last:mb-0 leading-relaxed"
-                  >
-                    {children}
-                  </motion.p>
-                ),
-                ul: ({ children }) => (
-                  <motion.ul 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 }}
-                    className="mb-3 list-disc pl-5 last:mb-0 space-y-1"
-                  >
-                    {children}
-                  </motion.ul>
-                ),
-                ol: ({ children }) => (
-                  <motion.ol 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 }}
-                    className="mb-3 list-decimal pl-5 last:mb-0 space-y-1"
-                  >
-                    {children}
-                  </motion.ol>
-                ),
-                li: ({ children }) => (
-                  <motion.li 
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.4 }}
-                    className="leading-relaxed"
-                  >
-                    {children}
-                  </motion.li>
-                ),
-                a: ({ href, children }) => (
-                  <motion.a
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.4 }}
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={cn(
-                      "font-medium underline-offset-2 transition-colors hover:underline",
-                      isUser ? "text-primary-foreground/90 hover:text-primary-foreground" : "text-primary hover:text-primary/80",
-                    )}
-                  >
-                    {children}
-                  </motion.a>
-                ),
-                blockquote: ({ children }) => (
-                  <motion.blockquote 
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.4 }}
-                    className={cn(
-                      "border-l-4 pl-4 my-3 italic",
-                      isUser ? "border-primary-foreground/30" : "border-primary/30"
-                    )}
-                  >
-                    {children}
-                  </motion.blockquote>
-                ),
-              }}
-            >
-              {message.content}
-            </ReactMarkdown>
+          {/* Subtle shine effect on hover */}
+          <motion.div
+            className={cn(
+              "pointer-events-none absolute inset-0 bg-linear-to-br opacity-0 transition-opacity duration-500",
+              isUser ? "from-white/10 to-transparent" : "from-primary/5 to-transparent"
+            )}
+            animate={{ opacity: hover ? 1 : 0 }}
+          />
+
+          {/* Content */}
+          <div className="relative z-10 text-[15px] leading-relaxed">
+            {renderMessage(message.content)}
           </div>
 
+          {/* Enhanced Copy Button */}
           <AnimatePresence>
-            {(isHovered || copied) && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
+            {(hover || copied) && (
+              <motion.button
+                onClick={handleCopy}
+                initial={{ opacity: 0, scale: 0.7, y: -8 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.7, y: -8 }}
+                whileHover={{ scale: 1.15 }}
+                whileTap={{ scale: 0.85 }}
+                transition={{ type: "spring", stiffness: 500, damping: 25 }}
                 className={cn(
-                  "absolute",
-                  isUser ? "top-2 left-2" : "top-2 right-2",
+                  "absolute top-3 z-40 rounded-lg border p-2 shadow-xl backdrop-blur-xl transition-all duration-200",
+                  isUser
+                    ? "left-3 border-white/30 bg-white/25 hover:bg-white/35"
+                    : "right-3 border-border/50 bg-background/90 hover:bg-background"
                 )}
+                aria-label="Copy message"
               >
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className={cn(
-                    "h-8 w-8 backdrop-blur-sm transition-colors",
-                    isUser 
-                      ? "hover:bg-primary-foreground/20 text-primary-foreground/70 hover:text-primary-foreground" 
-                      : "hover:bg-background/20 text-muted-foreground hover:text-foreground",
+                <AnimatePresence mode="wait">
+                  {copied ? (
+                    <motion.div
+                      key="check"
+                      initial={{ scale: 0, rotate: -90 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      exit={{ scale: 0, rotate: 90 }}
+                      transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                    >
+                      <Check
+                        className={cn("h-4 w-4", isUser ? "text-white" : "text-primary")}
+                        strokeWidth={2.5}
+                      />
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="copy"
+                      initial={{ scale: 0, rotate: -90 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      exit={{ scale: 0, rotate: 90 }}
+                      transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                    >
+                      <Copy
+                        className={cn(
+                          "h-4 w-4",
+                          isUser ? "text-white/90" : "text-muted-foreground"
+                        )}
+                        strokeWidth={2}
+                      />
+                    </motion.div>
                   )}
-                  onClick={copyToClipboard}
-                >
-                  <AnimatePresence mode="wait">
-                    {copied ? (
-                      <motion.div
-                        key="check"
-                        initial={{ scale: 0, rotate: -180 }}
-                        animate={{ scale: 1, rotate: 0 }}
-                        exit={{ scale: 0, rotate: 180 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <Check className="h-4 w-4" />
-                      </motion.div>
-                    ) : (
-                      <motion.div
-                        key="copy"
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        exit={{ scale: 0 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <Copy className="h-4 w-4" />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </Button>
-              </motion.div>
+                </AnimatePresence>
+              </motion.button>
             )}
           </AnimatePresence>
         </motion.div>
       </div>
 
+      {/* User Avatar */}
       {isUser && (
-        <motion.div 
-          className="flex-shrink-0"
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.1 }}
+        <motion.div
+          className="shrink-0"
+          whileHover={{ scale: 1.15, rotate: -5 }}
+          transition={{ type: "spring", stiffness: 400, damping: 15 }}
         >
-          <div 
+          <div
             className={cn(
-              "flex h-8 w-8 items-center justify-center rounded-full border shadow-sm transition-all duration-200",
-              "bg-gradient-to-br from-primary/15 to-primary/5 border-primary/20",
-              isHovered && "shadow-md scale-105 border-primary/30"
+              "relative flex h-10 w-10 items-center justify-center rounded-full border shadow-lg transition-all duration-300",
+              "bg-linear-to-br from-primary/35 via-primary/25 to-primary/15",
+              "border-primary/40",
+              hover && "shadow-xl shadow-primary/25"
             )}
           >
-            <User className="text-primary h-4 w-4" />
+            {/* Rotating ring on hover */}
+            <motion.div
+              className="absolute inset-0 rounded-full border-2 border-dashed border-primary/30"
+              animate={{
+                rotate: hover ? 360 : 0,
+              }}
+              transition={{
+                duration: 3,
+                repeat: hover ? Infinity : 0,
+                ease: "linear",
+              }}
+            />
+            <User className="relative z-10 h-5 w-5 text-primary" strokeWidth={2} />
           </div>
         </motion.div>
       )}
