@@ -254,10 +254,6 @@ export function MessageBubble({ message }: { message: Message }) {
       layout
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      initial={{ opacity: 0, y: 20, scale: 0.97 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -12, scale: 0.97 }}
-      transition={{ type: "spring", stiffness: 200, damping: 25 }}
       className={cn(
         "group flex w-full gap-4 px-1 transition-all duration-300",
         isUser ? "justify-end" : "justify-start"
@@ -298,9 +294,6 @@ export function MessageBubble({ message }: { message: Message }) {
       <div className={cn("flex max-w-[80%] flex-col gap-1.5 md:max-w-[75%]", isUser && "items-end")}>
         {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: -5 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
           className={cn(
             "flex items-center gap-2 px-1 text-xs",
             isUser ? "flex-row-reverse" : "flex-row"
@@ -317,8 +310,6 @@ export function MessageBubble({ message }: { message: Message }) {
 
         {/* Message Bubble */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
           whileHover={{ scale: 1.005 }}
           transition={{ delay: 0.08, type: "spring", stiffness: 300, damping: 25 }}
           className={cn(

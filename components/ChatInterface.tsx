@@ -1,17 +1,12 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Loader2, Sparkles } from "lucide-react";
 import { Message } from "@/types/chat";
 import { MessageBubble } from "./MessageBubble";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
-import { cn } from "@/lib/utils";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-
 import {
   useChatSession,
   useCreateSession,
@@ -21,6 +16,8 @@ import {
 import ChatSidebar from "./ChatSIdebar";
 import Navbar from "./Navbar";
 import { TypingIndicator } from "./TypingIndicator";
+import { ChatInputBar } from "./ChatInput";
+import { Sparkles } from "lucide-react";
 
 export function ChatInterface() {
   const [currentSessionId, setCurrentSessionId] = useLocalStorage<
@@ -51,14 +48,12 @@ export function ChatInterface() {
   const createSessionMutation = useCreateSession();
   const updateSessionMutation = useUpdateSession();
 
-  // Focus input when component mounts or when starting a new chat
   useEffect(() => {
     if (isNewChat) {
       inputRef.current?.focus();
     }
   }, [isNewChat]);
 
-  // Load session messages when current session changes
   useEffect(() => {
     if (currentSession) {
       setMessages(currentSession.messages || []);
@@ -69,7 +64,6 @@ export function ChatInterface() {
     }
   }, [currentSession]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (abortControllerRef.current) {
@@ -102,7 +96,6 @@ export function ChatInterface() {
   };
 
   const handleNewChat = () => {
-    // Cancel any ongoing requests
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -112,14 +105,12 @@ export function ChatInterface() {
     setIsStreaming(false);
     setSidebarOpen(false);
     setIsNewChat(true);
-    // Focus input after state updates
     setTimeout(() => {
       inputRef.current?.focus();
     }, 0);
   };
 
   const handleSessionSelect = (sessionId: string) => {
-    // Cancel any ongoing requests
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -129,7 +120,6 @@ export function ChatInterface() {
     setIsNewChat(false);
   };
 
-  // Simplified session verification with better error handling
   const verifySession = async (
     sessionId: string,
     signal?: AbortSignal,
@@ -152,14 +142,13 @@ export function ChatInterface() {
       return data.success && data.data?.exists;
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
-        throw error; // Re-throw abort errors
+        throw error;
       }
       console.error("Session verification failed:", error);
       return false;
     }
   };
 
-  // Enhanced session verification with exponential backoff and abort signal
   const verifySessionWithRetry = async (
     sessionId: string,
     maxRetries = 3,
@@ -176,9 +165,8 @@ export function ChatInterface() {
           return true;
         }
 
-        // If not the last attempt, wait before retrying
         if (attempt < maxRetries - 1) {
-          const delay = Math.min(200 * Math.pow(2, attempt), 1000); // 200ms, 400ms, 800ms max
+          const delay = Math.min(200 * Math.pow(2, attempt), 1000);
           await new Promise((resolve, reject) => {
             const timeout = setTimeout(resolve, delay);
             signal?.addEventListener("abort", () => {
@@ -208,7 +196,6 @@ export function ChatInterface() {
   const handleSendMessage = async () => {
     if (!input.trim() || isStreaming) return;
 
-    // Create new abort controller for this request
     abortControllerRef.current = new AbortController();
     const { signal } = abortControllerRef.current;
 
@@ -227,7 +214,6 @@ export function ChatInterface() {
       timestamp: new Date(),
     };
 
-    // Add user message immediately and start streaming
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsStreaming(true);
@@ -238,7 +224,6 @@ export function ChatInterface() {
       );
       let sessionId = currentSessionId;
 
-      // Create new session if needed
       if (!sessionId || isNewChat) {
         try {
           console.log("Creating new session...");
@@ -259,10 +244,8 @@ export function ChatInterface() {
           sessionId = result.id;
           console.log("Session created with ID:", sessionId);
 
-          // Wait for session to be available in the database
           await new Promise((resolve) => setTimeout(resolve, 500));
 
-          // Verify session with retry logic and abort signal
           console.log("Verifying session availability...");
           const sessionExists = await verifySessionWithRetry(
             sessionId,
@@ -278,12 +261,11 @@ export function ChatInterface() {
 
           console.log("Session verified successfully");
 
-          // Only update state after successful verification
           setCurrentSessionId(sessionId);
           setIsNewChat(false);
         } catch (error) {
           if (error instanceof Error && error.name === "AbortError") {
-            return; // Request was cancelled, don't show error
+            return;
           }
 
           console.error("Session creation error:", error);
@@ -298,12 +280,10 @@ export function ChatInterface() {
         }
       }
 
-      // Check if request was aborted before proceeding
       if (signal.aborted) {
         return;
       }
 
-      // Verify existing session before sending message
       if (!isNewChat) {
         const sessionExists = await verifySession(sessionId, signal);
         if (!sessionExists) {
@@ -313,7 +293,6 @@ export function ChatInterface() {
 
       console.log("Sending message to API...");
 
-      // Send message to API
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
@@ -371,13 +350,11 @@ export function ChatInterface() {
                 { ...assistantMessage, content: fullContent },
               ];
 
-              // Update final message
               setMessages((prev) => [
                 ...prev.filter((msg) => msg.role === "user"),
                 { ...assistantMessage, content: fullContent },
               ]);
 
-              // Update session in background, don't wait for it
               updateSessionMutation
                 .mutateAsync({
                   id: sessionId,
@@ -399,7 +376,6 @@ export function ChatInterface() {
                 if (parsed.content) {
                   fullContent += parsed.content;
 
-                  // Add assistant message on first chunk
                   if (!hasStartedStreaming) {
                     setMessages((prev) => [
                       ...prev,
@@ -407,7 +383,6 @@ export function ChatInterface() {
                     ]);
                     hasStartedStreaming = true;
                   } else {
-                    // Update streaming message
                     setMessages((prev) =>
                       prev.map((msg) =>
                         msg.id === assistantMessage.id
@@ -426,7 +401,7 @@ export function ChatInterface() {
       }
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
-        return; // Request was cancelled, don't show error
+        return;
       }
 
       console.error("Error:", error);
@@ -438,7 +413,6 @@ export function ChatInterface() {
     }
   };
 
-  // Changed onKeyPress to onKeyDown to avoid React warning
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -456,71 +430,102 @@ export function ChatInterface() {
   const isLoading =
     isStreaming || sessionLoading || createSessionMutation.isPending;
 
-  // Welcome screen component
   const WelcomeScreen = () => (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-      className="relative mt-10 flex h-full flex-col items-center justify-center"
-    >
-      <motion.div
-        className="relative"
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 20 }}
-      >
+    <div className="flex h-full flex-col items-center justify-center px-4 py-20">
+      <div className="relative mb-8">
         <motion.div
-          className="from-primary/20 to-primary/10 absolute inset-0 rounded-full bg-gradient-to-r blur-2xl"
+          className="absolute inset-0 rounded-full"
           animate={{
-            scale: [1, 1.1, 1],
-            opacity: [0.5, 0.8, 0.5],
+            scale: [1, 1.3, 1],
+            opacity: [0.3, 0.1, 0.3],
+          }}
+          transition={{
+            duration: 4,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          style={{
+            background: "radial-gradient(circle, rgb(99 102 241 / 0.3) 0%, transparent 70%)",
+          }}
+        />
+
+        {/* Middle ring */}
+        <motion.div
+          className="absolute inset-0 rounded-full"
+          animate={{
+            scale: [1, 1.2, 1],
+            opacity: [0.4, 0.2, 0.4],
           }}
           transition={{
             duration: 3,
             repeat: Infinity,
             ease: "easeInOut",
+            delay: 0.5,
+          }}
+          style={{
+            background: "radial-gradient(circle, rgb(139 92 246 / 0.3) 0%, transparent 70%)",
           }}
         />
-        <motion.div
-          className="from-primary/20 to-primary/5 border-primary/10 relative rounded-full border bg-gradient-to-br p-6 backdrop-blur-sm"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <Sparkles className="text-primary h-12 w-12" />
-        </motion.div>
-      </motion.div>
 
-      <motion.div
-        className="max-w-md space-y-4 text-center"
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.4 }}
-      >
-        <motion.h1
-          className="from-foreground to-foreground/70 bg-gradient-to-r bg-clip-text text-3xl font-bold text-transparent"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
+        {/* Icon container */}
+        <motion.div
+          className="relative rounded-3xl border border-primary/20 bg-linear-to-br from-primary/10 via-primary/5 to-transparent p-8 shadow-2xl backdrop-blur-sm"
+          whileHover={{ scale: 1.05, rotate: [0, -2, 2, 0] }}
+          transition={{ duration: 0.3 }}
+        >
+          <motion.div
+            animate={{
+              rotate: [0, 10, -10, 0],
+            }}
+            transition={{
+              duration: 6,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          >
+            <Sparkles className="h-16 w-16 text-primary" strokeWidth={1.5} />
+          </motion.div>
+        </motion.div>
+      </div>
+
+      {/* Title and description */}
+      <div className="max-w-2xl space-y-6 text-center">
+        <h1
+          className="bg-linear-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-4xl font-bold tracking-tight text-transparent sm:text-5xl"
         >
           Welcome to AI Chat
-        </motion.h1>
+        </h1>
 
-        <motion.p
-          className="text-muted-foreground text-lg leading-relaxed"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8 }}
-        >
-          Start a conversation and explore the possibilities. Ask me anything
-          about any topic.
-        </motion.p>
-      </motion.div>
-    </motion.div>
+        <p className="text-lg leading-relaxed text-muted-foreground sm:text-xl">
+          Start a conversation and explore endless possibilities. Ask me anything—from creative ideas to complex questions.
+        </p>
+
+        {/* Suggestion chips */}
+        <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
+          {[
+            "Explain quantum computing",
+            "Write a creative story",
+            "Help me code",
+            "Plan my day"
+          ].map((suggestion, i) => (
+            <motion.button
+              key={i}
+              onClick={() => setInput(suggestion)}
+              className="rounded-full border border-border/50 bg-card/50 px-4 py-2 text-sm text-muted-foreground backdrop-blur-sm transition-all hover:border-primary/50 hover:bg-primary/5 hover:text-foreground"
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
+              transition={{ delay: 1 + i * 0.1 }}
+            >
+              {suggestion}
+            </motion.button>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 
   return (
-    <div className="from-background via-background to-background/95 flex h-screen flex-col bg-gradient-to-br">
+    <div className="flex h-screen flex-col bg-linear-to-br from-background via-background to-muted/20">
       <Navbar
         isSidebarOpen={sidebarOpen}
         isLoading={isLoading}
@@ -538,7 +543,7 @@ export function ChatInterface() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
+              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
               onClick={() => setSidebarOpen(false)}
             />
           )}
@@ -551,22 +556,15 @@ export function ChatInterface() {
               initial={{ x: -320, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: -320, opacity: 0 }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed z-50 h-full w-80 flex-shrink-0 md:relative md:translate-x-0"
+              transition={{ type: "spring", damping: 30, stiffness: 250 }}
+              className="fixed top-0 h-screen pt-20 -mb-20 border-r z-40 bg-background"
             >
-              <motion.div
-                className="bg-card/95 border-border/50 h-full border-r shadow-xl backdrop-blur-xl md:shadow-none"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.1 }}
-              >
-                <ChatSidebar
-                  currentSessionId={currentSessionId}
-                  onSessionSelect={handleSessionSelect}
-                  onNewChat={handleNewChat}
-                  className="h-full"
-                />
-              </motion.div>
+              <ChatSidebar
+                currentSessionId={currentSessionId}
+                onSessionSelect={handleSessionSelect}
+                onNewChat={handleNewChat}
+                className="h-[calc(100vh-10rem)] overflow-y-auto"
+              />
             </motion.div>
           )}
         </AnimatePresence>
@@ -586,7 +584,7 @@ export function ChatInterface() {
                   <WelcomeScreen />
                 ) : (
                   <motion.div
-                    className="flex-1 px-4 py-6"
+                    className="flex-1 px-4 py-8"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.3 }}
@@ -597,34 +595,33 @@ export function ChatInterface() {
                           <motion.div
                             key={message.id}
                             layout
-                            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                            initial={{ opacity: 0, y: 20, scale: 0.98 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                            exit={{ opacity: 0, y: -20, scale: 0.98 }}
                             transition={{
                               duration: 0.3,
-                              delay: Math.min(index * 0.05, 0.3),
+                              delay: Math.min(index * 0.03, 0.2),
                               type: "spring",
-                              stiffness: 300,
-                              damping: 25,
+                              stiffness: 350,
+                              damping: 30,
                             }}
                           >
                             <MessageBubble message={message} />
                           </motion.div>
                         ))}
 
-                        {/* Typing Indicator */}
                         {isStreaming && (
                           <motion.div
                             key="typing"
                             layout
-                            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                            initial={{ opacity: 0, y: 20, scale: 0.98 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                            exit={{ opacity: 0, y: -20, scale: 0.98 }}
                             transition={{
                               duration: 0.3,
                               type: "spring",
-                              stiffness: 300,
-                              damping: 25,
+                              stiffness: 350,
+                              damping: 30,
                             }}
                           >
                             <TypingIndicator />
@@ -632,102 +629,23 @@ export function ChatInterface() {
                         )}
                       </AnimatePresence>
                     </div>
+
+                    {/* Bottom padding for better scroll */}
+                    <div className="h-8" />
                   </motion.div>
                 )}
               </div>
             </ScrollArea>
           </div>
 
-          {/* Input Area */}
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="border-border/50 bg-background/95 border-t backdrop-blur-xl"
-          >
-            <div className="mx-auto max-w-4xl p-4">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleSendMessage();
-                }}
-                className="relative"
-              >
-                <motion.div
-                  className="border-border/50 bg-card/50 focus-within:ring-primary/20 focus-within:border-primary/50 relative rounded-2xl border shadow-lg backdrop-blur-sm transition-all duration-200 focus-within:ring-2 hover:shadow-xl"
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                >
-                  <Input
-                    ref={inputRef}
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Type your message..."
-                    disabled={isLoading}
-                    className={cn(
-                      "placeholder:text-muted-foreground/60 min-h-[56px] resize-none border-0 bg-transparent pr-14 text-base focus-visible:ring-0 focus-visible:ring-offset-0",
-                      "rounded-2xl px-6 py-4",
-                      isLoading && "cursor-not-allowed opacity-50",
-                    )}
-                    autoFocus
-                  />
-
-                  <motion.div
-                    className="absolute top-1/2 right-2 -translate-y-1/2"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <Button
-                      type="submit"
-                      disabled={isLoading || input.trim() === ""}
-                      className={cn(
-                        "h-10 w-10 rounded-xl shadow-md",
-                        "bg-primary hover:bg-primary/90",
-                        "transition-all duration-200",
-                        "disabled:cursor-not-allowed disabled:opacity-50",
-                      )}
-                      size="icon"
-                    >
-                      <AnimatePresence mode="wait">
-                        {isLoading ? (
-                          <motion.div
-                            key="loading"
-                            initial={{ scale: 0, rotate: 0 }}
-                            animate={{ scale: 1, rotate: 360 }}
-                            exit={{ scale: 0 }}
-                            transition={{ duration: 0.2 }}
-                          >
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          </motion.div>
-                        ) : (
-                          <motion.div
-                            key="send"
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            exit={{ scale: 0 }}
-                            transition={{ duration: 0.2 }}
-                          >
-                            <Send className="h-4 w-4" />
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </Button>
-                  </motion.div>
-                </motion.div>
-
-                {/* Input hint */}
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.5 }}
-                  className="text-muted-foreground/60 mt-2 text-center text-xs"
-                >
-                  Press Enter to send, Shift + Enter for new line
-                </motion.p>
-              </form>
-            </div>
-          </motion.div>
+          <ChatInputBar
+            input={input}
+            setInput={setInput}
+            handleSendMessage={handleSendMessage}
+            handleKeyDown={handleKeyDown}
+            inputRef={inputRef}
+            isLoading={isLoading}
+          />
         </motion.div>
       </div>
     </div>

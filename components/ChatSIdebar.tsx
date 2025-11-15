@@ -120,12 +120,12 @@ export default function ChatSidebar({
       animate={{ x: 0, opacity: 1 }}
       transition={{ type: "spring", stiffness: 80, damping: 20 }}
       className={cn(
-        "flex h-full w-[290px] flex-col",
+        "flex h-full w-[290px] flex-col overflow-y-auto",
         className,
       )}
     >
       {/* HEADER */}
-      <div className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur-xl p-4 space-y-3 shadow-sm">
+      <div className="sticky top-0 z-20 p-4 space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold tracking-tight">Chats</h2>
 
@@ -207,7 +207,7 @@ export default function ChatSidebar({
       </div>
 
       {/* CHAT LIST */}
-      <ScrollArea className="flex-1 px-3 pb-6">
+      <ScrollArea className="flex-1 px-3 pb-6 overflow-y-auto">
         {isLoading ? (
           <div className="animate-pulse space-y-3 p-4">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -221,7 +221,7 @@ export default function ChatSidebar({
             {!searchQuery && <p className="text-xs mt-1">Start a conversation.</p>}
           </div>
         ) : (
-          <div className="space-y-1 p-1">
+          <div className="space-y-1 p-1 overflow-y-auto">
             <AnimatePresence mode="popLayout">
               {filteredSessions.map((session, index) => (
                 <motion.div
