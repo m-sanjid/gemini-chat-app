@@ -1,5 +1,4 @@
 import React from "react";
-import { MotionButton } from "./ui/MotionButton";
 import { ThemeToggle } from "./ThemeToggle";
 import {
   Trash2,
@@ -30,6 +29,7 @@ import {
 } from "./ui/alert-dialog";
 import { Message } from "@/types/chat";
 import { AnimatePresence } from "motion/react";
+import { Button } from "./ui/button";
 
 const Navbar = ({
   clearChat,
@@ -62,13 +62,11 @@ const Navbar = ({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <MotionButton
+                  <Button
                     variant="ghost"
                     size="icon"
                     onClick={onToggleSidebar}
-                    className="hover:bg-primary/10"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
+                    className="hover:bg-primary/10 active:scale-95 transition-all duration-200 ease-in-out"
                   >
                     {/* Animated Icon Toggle */}
                     <AnimatePresence initial={false} mode="wait">
@@ -86,7 +84,7 @@ const Navbar = ({
                         )}
                       </MotionDiv>
                     </AnimatePresence>
-                  </MotionButton>
+                  </Button>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>{isSidebarOpen ? "Close Sidebar" : "Open Sidebar"}</p>
@@ -113,20 +111,19 @@ const Navbar = ({
               {/* Mobile: New Chat */}
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <MotionButton
+                  <Button
                     variant="ghost"
                     size="icon"
                     onClick={onNewChat}
                     disabled={isLoading}
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
+                    className="hover:bg-primary/10 active:scale-95 transition-all duration-200 ease-in-out"
                   >
                     {isLoading ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
                       <Plus className="h-4 w-4" />
                     )}
-                  </MotionButton>
+                  </Button>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>New Chat</p>
@@ -138,16 +135,14 @@ const Navbar = ({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <AlertDialogTrigger asChild>
-                      <MotionButton
+                      <Button
                         variant="ghost"
                         size="icon"
                         disabled={messages.length === 0 || isLoading}
-                        className="text-destructive/80 hover:text-destructive hover:bg-destructive/10"
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
+                        className="text-destructive/80 hover:text-destructive hover:bg-destructive/10 active:scale-95 transition-all duration-200 ease-in-out"
                       >
                         <Trash2 className="h-4 w-4" />
-                      </MotionButton>
+                      </Button>
                     </AlertDialogTrigger>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -188,13 +183,12 @@ const Navbar = ({
               {/* Desktop: New Chat */}
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <MotionButton
+                  <Button
                     variant="outline"
                     size="sm"
                     onClick={onNewChat}
                     disabled={isLoading}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                    className="active:scale-95 transition-all duration-200 ease-in-out"
                   >
                     {isLoading ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -202,7 +196,7 @@ const Navbar = ({
                       <Plus className="mr-2 h-4 w-4" />
                     )}
                     New Chat
-                  </MotionButton>
+                  </Button>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Start a new conversation</p>
@@ -214,12 +208,11 @@ const Navbar = ({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <AlertDialogTrigger asChild>
-                      <MotionButton
+                      <Button
                         variant="outline"
                         size="sm"
                         disabled={messages.length === 0 || isLoading}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
+                        className="active:scale-95 transition-all duration-200 ease-in-out"
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
                         Clear
@@ -228,7 +221,7 @@ const Navbar = ({
                             {messages.length}
                           </Badge>
                         )}
-                      </MotionButton>
+                      </Button>
                     </AlertDialogTrigger>
                   </TooltipTrigger>
                   <TooltipContent>

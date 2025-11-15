@@ -18,7 +18,7 @@ export function ChatInputBar({
   setInput: (v: string) => void;
   handleSendMessage: () => void;
   handleKeyDown: (e: React.KeyboardEvent) => void;
-  inputRef: any;
+  inputRef: React.RefObject<HTMLInputElement | null>;
   isLoading: boolean;
 }) {
   return (
@@ -26,10 +26,10 @@ export function ChatInputBar({
       initial={{ y: 20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ delay: 0.25 }}
-      className="relative border-t border-border/40 bg-gradient-to-t from-background/95 via-background/90 to-transparent backdrop-blur-xl"
+      className="relative border-t border-border/40 bg-linear-to-t from-background/95 via-background/90 to-transparent backdrop-blur-xl"
     >
       {/* Top subtle separator */}
-      <div className="pointer-events-none absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" />
+      <div className="pointer-events-none absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-border/40 to-transparent" />
 
       <div className="mx-auto max-w-4xl px-4 py-6">
         <form

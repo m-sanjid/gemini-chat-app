@@ -1,7 +1,7 @@
 "use client";
 
 import { Message } from "@/types/chat";
-import { User, Bot, Clock, Copy, Check, Sparkles } from "lucide-react";
+import { User, Clock, Copy, Check, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { JSX, useMemo, useState } from "react";
 import { toast } from "sonner";
