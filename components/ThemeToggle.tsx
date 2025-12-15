@@ -15,6 +15,15 @@ import { motion } from "motion/react";
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
 
+  // Sync HTML data-theme attribute for CSS variables
+  React.useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.setAttribute("data-theme", theme ?? "light");
+    }
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
+
   return (
     <TooltipProvider>
       <Tooltip>
@@ -22,8 +31,9 @@ export function ThemeToggle() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+            onClick={toggleTheme}
             className="hover:bg-primary/10"
+            aria-label="Toggle theme"
           >
             <motion.div
               initial={false}
@@ -46,3 +56,5 @@ export function ThemeToggle() {
     </TooltipProvider>
   );
 }
+
+
